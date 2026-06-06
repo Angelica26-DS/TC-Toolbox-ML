@@ -1,4 +1,6 @@
 # Importamos pandas para crear DataFrames de prueba
+from unittest import result
+
 import pandas as pd
 
 # Importamos pytest para comprobar que se lanzan errores correctamente
@@ -39,6 +41,9 @@ def test_get_features_num_regression_detects_correlated_features():
 
     # Comprobamos que la variable correlacionada aparece en el resultado
     assert "feature_corr" in result
+
+    # Comprobamos que la variable numérica poco correlacionada no aparece en el resultado
+    assert "feature_no_corr" not in result
 
     # Comprobamos que la variable categórica no aparece en el resultado
     assert "category" not in result
