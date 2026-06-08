@@ -1,6 +1,5 @@
-"""
-Core EDA and Machine Learning helper functions for toolbox_ml.
-"""
+import pandas as pd
+
 
 # ──────────────────────────────────────────────
 # Función 2: tipifica_variables
@@ -31,14 +30,19 @@ def tipifica_variables(
         print("Error: el argumento 'df' debe ser un pd.DataFrame.")
         return None
 
-    # Validación 2: umbral_categoria tiene que ser un entero positivo
+    # Validación 2: el DataFrame no puede estar vacío
+    if df.empty:
+        print("Error: el DataFrame está vacío.")
+        return None
+
+    # Validación 3: umbral_categoria tiene que ser un entero positivo
     if not isinstance(umbral_categoria, int) or umbral_categoria <= 0:
         print("Error: 'umbral_categoria' debe ser un entero positivo.")
         return None
 
-    # Validación 3: umbral_continua tiene que ser un float entre 0 y 100
-    if not isinstance(umbral_continua, (int, float)) or not (0 <= umbral_continua <= 100):
-        print("Error: 'umbral_continua' debe ser un número entre 0 y 100.")
+    # Validación 4: umbral_continua tiene que ser float entre 0 y 100
+    if not isinstance(umbral_continua, float) or not (0 <= umbral_continua <= 100):
+        print("Error: 'umbral_continua' debe ser un float entre 0 y 100.")
         return None
 
     total_filas = len(df)
