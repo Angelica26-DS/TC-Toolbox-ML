@@ -1,6 +1,8 @@
-"""
-Core EDA and Machine Learning helper functions for toolbox_ml.
-"""
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy import stats
+
 
 # ──────────────────────────────────────────────
 # Función 3: plot_features_num_regression
@@ -57,7 +59,7 @@ def plot_features_num_regression(
             print("Error: 'pvalue' debe ser un número entre 0 y 1, o None.")
             return None
 
-    # Si no se pasan columnas, usamos todas las numéricas excepto el target
+    # Si no se pasan columnas usamos todas las numéricas excepto el target
     if not columns:
         columnas_candidatas = [
             col for col in df.select_dtypes(include="number").columns
@@ -74,6 +76,15 @@ def plot_features_num_regression(
 
     for col in columnas_candidatas:
         datos_validos = df[[col, target_col]].dropna()
+
+        # Validación: necesitamos al menos 2 filas válidas
+        if len(datos_validos) < 2:
+            continue
+
+        # Validación: ni la columna ni el target pueden ser constantes
+        if datos_validos[col].std() == 0 or datos_validos[target_col].std() == 0:
+            continue
+
         corr, p = stats.pearsonr(datos_validos[col], datos_validos[target_col])
 
         if abs(corr) >= umbral_corr:
@@ -85,8 +96,8 @@ def plot_features_num_regression(
         print("No hay columnas que cumplan los criterios de correlación.")
         return columnas_seleccionadas
 
-    # Pintamos pairplots en grupos de 5
-    TAMANO_GRUPO = 5
+    # Pintamos pairplots en grupos de 4 (más el target = 5 columnas máximo)
+    TAMANO_GRUPO = 4
 
     for i in range(0, len(columnas_seleccionadas), TAMANO_GRUPO):
         grupo = columnas_seleccionadas[i: i + TAMANO_GRUPO]
