@@ -1,8 +1,4 @@
 import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-from scipy import stats
 
 
 # ──────────────────────────────────────────────
@@ -23,9 +19,14 @@ def describe_df(df: pd.DataFrame) -> pd.DataFrame:
         Retorna None si el input no es un DataFrame válido.
     """
 
-    # Validación: el input tiene que ser un DataFrame
+    # Validación 1: el input tiene que ser un DataFrame
     if not isinstance(df, pd.DataFrame):
         print("Error: el argumento 'df' debe ser un pd.DataFrame.")
+        return None
+
+    # Validación 2: el DataFrame no puede estar vacío
+    if df.empty:
+        print("Error: el DataFrame está vacío.")
         return None
 
     # Número total de filas para calcular porcentajes
