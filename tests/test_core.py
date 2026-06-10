@@ -2,209 +2,311 @@
 Unit tests for toolbox_ml.eda.core.
 """
 
-# Importamos pandas para crear DataFrames de prueba
+import pytest
 import pandas as pd
 
-# Importamos la función que queremos testear desde la estructura final del proyecto
-from toolbox_ml.eda.core import get_features_num_regression
+from toolbox_ml.eda.core import (
+    describe_df,
+    tipifica_variables,
+    plot_features_num_regression,
+    get_features_num_regression,
+)
 
+
+# ══════════════════════════════════════════════
+# Tests de describe_df
+# ══════════════════════════════════════════════
+
+def test_describe_df_devuelve_dataframe():
+    df = pd.DataFrame({"a": [1, 2, None], "b": ["x", "y", "z"]})
+    resultado = describe_df(df)
+
+    assert isinstance(resultado, pd.DataFrame)
+
+
+def test_describe_df_columnas_correctas():
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    resultado = describe_df(df)
+
+    assert set(resultado.columns) == {
+        "tipo",
+        "porcentaje_nulos",
+        "valores_unicos",
+        "porcentaje_cardinalidad",
+    }
+
+
+def test_describe_df_porcentaje_nulos_correcto():
+    df = pd.DataFrame({"a": [1, None, None, None]})
+    resultado = describe_df(df)
+
+    assert resultado.loc["a", "porcentaje_nulos"] == pytest.approx(75.0, abs=0.01)
+
+
+def test_describe_df_valores_unicos_correcto():
+    df = pd.DataFrame({"col": [1, 2, 2, None]})
+    resultado = describe_df(df)
+
+    assert resultado.loc["col", "valores_unicos"] == 2
+
+
+def test_describe_df_retorna_none_con_input_invalido():
+    assert describe_df("esto no es un dataframe") is None
+    assert describe_df([1, 2, 3]) is None
+    assert describe_df(None) is None
+
+
+def test_describe_df_retorna_none_con_df_vacio():
+    assert describe_df(pd.DataFrame()) is None
+
+
+# ══════════════════════════════════════════════
+# Tests de tipifica_variables
+# ══════════════════════════════════════════════
+
+def test_tipifica_variables_devuelve_dataframe():
+    df = pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "x"]})
+    resultado = tipifica_variables(df, umbral_categoria=10, umbral_continua=50.0)
+
+    assert isinstance(resultado, pd.DataFrame)
+
+
+def test_tipifica_variables_columnas_correctas():
+    df = pd.DataFrame({"a": [1, 2]})
+    resultado = tipifica_variables(df, umbral_categoria=10, umbral_continua=50.0)
+
+    assert set(resultado.columns) == {"nombre_variable", "tipo_sugerido"}
+
+
+def test_tipifica_variables_detecta_binaria():
+    df = pd.DataFrame({"sexo": ["hombre", "mujer", "hombre", "mujer"]})
+    resultado = tipifica_variables(df, umbral_categoria=10, umbral_continua=50.0)
+    fila = resultado[resultado["nombre_variable"] == "sexo"]
+
+    assert fila["tipo_sugerido"].values[0] == "Binaria"
+
+
+def test_tipifica_variables_detecta_categorica():
+    df = pd.DataFrame({"color": ["rojo", "azul", "verde", "rojo", "azul", "verde"]})
+    resultado = tipifica_variables(df, umbral_categoria=10, umbral_continua=50.0)
+    fila = resultado[resultado["nombre_variable"] == "color"]
+
+    assert fila["tipo_sugerido"].values[0] == "Categórica"
+
+
+def test_tipifica_variables_detecta_numerica_continua():
+    df = pd.DataFrame({"precio": list(range(100))})
+    resultado = tipifica_variables(df, umbral_categoria=10, umbral_continua=50.0)
+    fila = resultado[resultado["nombre_variable"] == "precio"]
+
+    assert fila["tipo_sugerido"].values[0] == "Numérica Continua"
+
+
+def test_tipifica_variables_retorna_none_si_df_invalido():
+    assert tipifica_variables("no es un df", 10, 50.0) is None
+
+
+def test_tipifica_variables_retorna_none_si_umbral_categoria_invalido():
+    df = pd.DataFrame({"a": [1, 2, 3]})
+
+    assert tipifica_variables(df, -5, 50.0) is None
+    assert tipifica_variables(df, 0, 50.0) is None
+
+
+def test_tipifica_variables_retorna_none_si_umbral_continua_invalido():
+    df = pd.DataFrame({"a": [1, 2, 3]})
+
+    assert tipifica_variables(df, 10, -1.0) is None
+    assert tipifica_variables(df, 10, 150.0) is None
+
+
+# ══════════════════════════════════════════════
+# Tests de plot_features_num_regression
+# ══════════════════════════════════════════════
+
+def test_plot_features_num_regression_devuelve_lista(monkeypatch):
+    monkeypatch.setattr("matplotlib.pyplot.show", lambda: None)
+
+    df = pd.DataFrame({
+        "target": [1, 2, 3, 4, 5],
+        "alta_corr": [2, 4, 6, 8, 10],
+        "baja_corr": [5, 1, 5, 1, 5],
+    })
+
+    resultado = plot_features_num_regression(
+        df,
+        target_col="target",
+        umbral_corr=0.8,
+    )
+
+    assert isinstance(resultado, list)
+    assert "alta_corr" in resultado
+    assert "baja_corr" not in resultado
+
+
+def test_plot_features_num_regression_retorna_none_df_invalido():
+    assert plot_features_num_regression("no es un df", target_col="target") is None
+
+
+def test_plot_features_num_regression_retorna_none_target_no_existe():
+    df = pd.DataFrame({"a": [1, 2, 3]})
+
+    assert plot_features_num_regression(df, target_col="no_existe") is None
+
+
+def test_plot_features_num_regression_retorna_none_target_no_numerico():
+    df = pd.DataFrame({"target": ["a", "b", "c"], "x": [1, 2, 3]})
+
+    assert plot_features_num_regression(df, target_col="target") is None
+
+
+def test_plot_features_num_regression_retorna_none_umbral_invalido():
+    df = pd.DataFrame({"target": [1, 2, 3], "x": [1, 2, 3]})
+
+    assert plot_features_num_regression(
+        df,
+        target_col="target",
+        umbral_corr=1.5,
+    ) is None
+
+
+def test_plot_features_num_regression_lista_vacia_si_nada_correlado(monkeypatch):
+    monkeypatch.setattr("matplotlib.pyplot.show", lambda: None)
+
+    df = pd.DataFrame({
+        "target": [1, 2, 3, 4, 5],
+        "ruido": [5, 3, 1, 4, 2],
+    })
+
+    resultado = plot_features_num_regression(
+        df,
+        target_col="target",
+        umbral_corr=0.99,
+    )
+
+    assert resultado == []
+
+
+# ══════════════════════════════════════════════
+# Tests de get_features_num_regression
+# ══════════════════════════════════════════════
 
 def test_get_features_num_regression_detects_correlated_features():
-    """
-    Comprueba que la función detecta correctamente una variable numérica
-    muy correlacionada con la variable objetivo.
-    """
-
-    # Creamos un DataFrame de ejemplo controlado
     df = pd.DataFrame({
-        # Variable objetivo numérica
         "target": [1, 2, 3, 4, 5],
-
-        # Esta variable está perfectamente correlacionada con target
         "feature_corr": [2, 4, 6, 8, 10],
-
-        # Esta variable no tiene una correlación lineal fuerte con target
         "feature_no_corr": [5, 3, 1, 3, 5],
-
-        # Esta variable es categórica y no debería tenerse en cuenta
-        "category": ["a", "b", "a", "b", "a"]
+        "category": ["a", "b", "a", "b", "a"],
     })
 
-    # Ejecutamos la función con un umbral alto de correlación
-    result = get_features_num_regression(
-        df=df,
-        target_col="target",
-        umbral_corr=0.8
-    )
-
-    # Comprobamos que la variable correlacionada aparece en el resultado
-    assert "feature_corr" in result
-
-    # Comprobamos que la variable numérica poco correlacionada no aparece
-    assert "feature_no_corr" not in result
-
-    # Comprobamos que la variable categórica no aparece en el resultado
-    assert "category" not in result
-
-
-def test_get_features_num_regression_returns_none_if_target_missing():
-    """
-    Comprueba que la función devuelve None si la variable objetivo
-    no existe en el DataFrame.
-    """
-
-    # Creamos un DataFrame sin columna target
-    df = pd.DataFrame({
-        "x": [1, 2, 3]
-    })
-
-    # Ejecutamos la función con una columna objetivo inexistente
-    result = get_features_num_regression(
-        df=df,
-        target_col="target",
-        umbral_corr=0.3
-    )
-
-    # La función debe devolver None en vez de lanzar un error
-    assert result is None
-
-
-def test_get_features_num_regression_returns_none_if_target_not_numeric():
-    """
-    Comprueba que la función devuelve None si la variable objetivo
-    no es numérica.
-    """
-
-    # Creamos un DataFrame con target categórico
-    df = pd.DataFrame({
-        "target": ["a", "b", "c"],
-        "x": [1, 2, 3]
-    })
-
-    # Ejecutamos la función con un target no numérico
-    result = get_features_num_regression(
-        df=df,
-        target_col="target",
-        umbral_corr=0.3
-    )
-
-    # La función debe devolver None porque target no es numérico
-    assert result is None
-
-
-def test_get_features_num_regression_ignores_constant_features():
-    """
-    Comprueba que la función ignora variables constantes.
-    Las variables constantes no sirven para calcular correlación.
-    """
-
-    # Creamos un DataFrame donde x_constant tiene siempre el mismo valor
-    df = pd.DataFrame({
-        "target": [1, 2, 3, 4, 5],
-        "x_constant": [1, 1, 1, 1, 1],
-        "x_corr": [10, 20, 30, 40, 50]
-    })
-
-    # Ejecutamos la función
-    result = get_features_num_regression(
-        df=df,
-        target_col="target",
-        umbral_corr=0.5
-    )
-
-    # La variable constante no debe estar en el resultado
-    assert "x_constant" not in result
-
-    # La variable correlacionada sí debe estar en el resultado
-    assert "x_corr" in result
-
-
-def test_get_features_num_regression_filters_by_pvalue():
-    """
-    Comprueba que la función acepta el argumento pvalue
-    y lo usa como filtro estadístico.
-    """
-
-    # Creamos un DataFrame con una relación lineal clara
-    df = pd.DataFrame({
-        "target": [1, 2, 3, 4, 5, 6, 7, 8],
-        "x_corr": [2, 4, 6, 8, 10, 12, 14, 16],
-        "x_random": [8, 1, 6, 3, 7, 2, 5, 4]
-    })
-
-    # Ejecutamos la función usando filtro de p-value
     result = get_features_num_regression(
         df=df,
         target_col="target",
         umbral_corr=0.8,
-        pvalue=0.05
     )
 
-    # La variable con correlación clara debería aparecer
-    assert "x_corr" in result
+    assert "feature_corr" in result
+    assert "feature_no_corr" not in result
+    assert "category" not in result
 
 
-def test_get_features_num_regression_returns_none_if_df_is_not_dataframe():
-    """
-    Comprueba que la función devuelve None si df no es un DataFrame.
-    """
+def test_get_features_num_regression_returns_none_if_target_missing():
+    df = pd.DataFrame({"x": [1, 2, 3]})
 
-    # Pasamos una lista en vez de un DataFrame
-    df = [1, 2, 3, 4]
-
-    # Ejecutamos la función
-    result = get_features_num_regression(
-        df=df,
-        target_col="target",
-        umbral_corr=0.3
-    )
-
-    # La función debe devolver None porque df no es un DataFrame
-    assert result is None
-
-
-def test_get_features_num_regression_returns_none_if_umbral_corr_invalid():
-    """
-    Comprueba que la función devuelve None si umbral_corr
-    no está entre 0 y 1.
-    """
-
-    # Creamos un DataFrame válido
-    df = pd.DataFrame({
-        "target": [1, 2, 3],
-        "x": [2, 4, 6]
-    })
-
-    # Ejecutamos la función con un umbral inválido
-    result = get_features_num_regression(
-        df=df,
-        target_col="target",
-        umbral_corr=1.5
-    )
-
-    # La función debe devolver None porque el umbral no es válido
-    assert result is None
-
-
-def test_get_features_num_regression_returns_none_if_pvalue_invalid():
-    """
-    Comprueba que la función devuelve None si pvalue
-    no está entre 0 y 1.
-    """
-
-    # Creamos un DataFrame válido
-    df = pd.DataFrame({
-        "target": [1, 2, 3],
-        "x": [2, 4, 6]
-    })
-
-    # Ejecutamos la función con un pvalue inválido
     result = get_features_num_regression(
         df=df,
         target_col="target",
         umbral_corr=0.3,
-        pvalue=1.5
     )
 
-    # La función debe devolver None porque el pvalue no es válido
+    assert result is None
+
+
+def test_get_features_num_regression_returns_none_if_target_not_numeric():
+    df = pd.DataFrame({
+        "target": ["a", "b", "c"],
+        "x": [1, 2, 3],
+    })
+
+    result = get_features_num_regression(
+        df=df,
+        target_col="target",
+        umbral_corr=0.3,
+    )
+
+    assert result is None
+
+
+def test_get_features_num_regression_ignores_constant_features():
+    df = pd.DataFrame({
+        "target": [1, 2, 3, 4, 5],
+        "x_constant": [1, 1, 1, 1, 1],
+        "x_corr": [10, 20, 30, 40, 50],
+    })
+
+    result = get_features_num_regression(
+        df=df,
+        target_col="target",
+        umbral_corr=0.5,
+    )
+
+    assert "x_constant" not in result
+    assert "x_corr" in result
+
+
+def test_get_features_num_regression_filters_by_pvalue():
+    df = pd.DataFrame({
+        "target": [1, 2, 3, 4, 5, 6, 7, 8],
+        "x_corr": [2, 4, 6, 8, 10, 12, 14, 16],
+        "x_random": [8, 1, 6, 3, 7, 2, 5, 4],
+    })
+
+    result = get_features_num_regression(
+        df=df,
+        target_col="target",
+        umbral_corr=0.8,
+        pvalue=0.05,
+    )
+
+    assert "x_corr" in result
+
+
+def test_get_features_num_regression_returns_none_if_df_is_not_dataframe():
+    result = get_features_num_regression(
+        df=[1, 2, 3, 4],
+        target_col="target",
+        umbral_corr=0.3,
+    )
+
+    assert result is None
+
+
+def test_get_features_num_regression_returns_none_if_umbral_corr_invalid():
+    df = pd.DataFrame({
+        "target": [1, 2, 3],
+        "x": [2, 4, 6],
+    })
+
+    result = get_features_num_regression(
+        df=df,
+        target_col="target",
+        umbral_corr=1.5,
+    )
+
+    assert result is None
+
+
+def test_get_features_num_regression_returns_none_if_pvalue_invalid():
+    df = pd.DataFrame({
+        "target": [1, 2, 3],
+        "x": [2, 4, 6],
+    })
+
+    result = get_features_num_regression(
+        df=df,
+        target_col="target",
+        umbral_corr=0.3,
+        pvalue=1.5,
+    )
+
     assert result is None
