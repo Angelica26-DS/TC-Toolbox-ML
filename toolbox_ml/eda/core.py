@@ -1,7 +1,12 @@
+"""
+Core EDA and Machine Learning helper functions for toolbox_ml.
+"""
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import stats
+from scipy.stats import pearsonr
 
 
 # ──────────────────────────────────────────────
@@ -123,12 +128,12 @@ def plot_features_num_regression(
 
     Argumentos:
         df (pd.DataFrame): DataFrame con los datos.
-        target_col (str): nombre de la columna target (numérica).
+        target_col (str): nombre de la columna target numérica.
         columns (list): lista de columnas candidatas. Si está vacía,
             se usan todas las columnas numéricas del DataFrame.
-        umbral_corr (float): umbral mínimo de correlación en valor absoluto (0-1).
+        umbral_corr (float): umbral mínimo de correlación en valor absoluto.
         pvalue (float o None): si se indica, solo se incluyen columnas cuyo
-            p-valor sea menor que este umbral.
+            p-value sea menor que este umbral.
 
     Retorna:
         list: lista de columnas que cumplen los criterios y se han pintado.
@@ -164,7 +169,9 @@ def plot_features_num_regression(
     else:
         columnas_candidatas = [
             col for col in columns
-            if col in df.columns and pd.api.types.is_numeric_dtype(df[col]) and col != target_col
+            if col in df.columns
+            and pd.api.types.is_numeric_dtype(df[col])
+            and col != target_col
         ]
 
     columnas_seleccionadas = []
@@ -199,3 +206,112 @@ def plot_features_num_regression(
         plt.show()
 
     return columnas_seleccionadas
+
+
+# ──────────────────────────────────────────────
+# Función 4: get_features_num_regression
+# ──────────────────────────────────────────────
+
+def get_features_num_regression(
+    df: pd.DataFrame,
+    target_col: str,
+    umbral_corr: float,
+    pvalue: float = None
+) -> list:
+    """
+    Identifica variables numéricas con correlación significativa respecto a
+    una variable objetivo numérica usando correlación de Pearson.
+
+    Argumentos:
+        df (pd.DataFrame): DataFrame con los datos.
+        target_col (str): nombre de la variable objetivo numérica.
+        umbral_corr (float): umbral mínimo de correlación absoluta.
+        pvalue (float o None): valor máximo opcional de p-value.
+
+    Retorna:
+        list: lista de variables numéricas que cumplen los criterios.
+        Retorna None si las validaciones no se cumplen.
+    """
+
+    # Validamos que df sea un DataFrame
+    if not isinstance(df, pd.DataFrame):
+        print("Error: el argumento 'df' debe ser un pd.DataFrame.")
+        return None
+
+    # Validamos que target_col sea un string
+    if not isinstance(target_col, str):
+        print("Error: 'target_col' debe ser un string.")
+        return None
+
+    # Validamos que target_col exista en el DataFrame
+    if target_col not in df.columns:
+        print(f"Error: la columna objetivo '{target_col}' no existe en el DataFrame.")
+        return None
+
+    # Validamos que target_col sea numérica
+    if not pd.api.types.is_numeric_dtype(df[target_col]):
+        print(f"Error: la variable objetivo '{target_col}' debe ser numérica.")
+        return None
+
+    # Validamos que umbral_corr sea numérico
+    if not isinstance(umbral_corr, (int, float)):
+        print("Error: 'umbral_corr' debe ser un número.")
+        return None
+
+    # Validamos que umbral_corr esté entre 0 y 1
+    if umbral_corr < 0 or umbral_corr > 1:
+        print("Error: 'umbral_corr' debe estar entre 0 y 1.")
+        return None
+
+    # Validamos que pvalue sea numérico si se informa
+    if pvalue is not None and not isinstance(pvalue, (int, float)):
+        print("Error: 'pvalue' debe ser un número o None.")
+        return None
+
+    # Validamos que pvalue esté entre 0 y 1 si se informa
+    if pvalue is not None and (pvalue < 0 or pvalue > 1):
+        print("Error: 'pvalue' debe estar entre 0 y 1.")
+        return None
+
+    # Lista donde guardaremos las variables seleccionadas
+    selected_features = []
+
+    # Seleccionamos automáticamente las columnas numéricas
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+
+    # Quitamos el target para no compararlo consigo mismo
+    if target_col in numeric_cols:
+        numeric_cols.remove(target_col)
+
+    # Recorremos cada columna numérica candidata
+    for col in numeric_cols:
+
+        # Eliminamos nulos solo en la pareja columna-target
+        temp_df = df[[col, target_col]].dropna()
+
+        # Si no hay datos suficientes, saltamos esa columna
+        if len(temp_df) < 2:
+            continue
+
+        # Si la columna es constante, no se puede calcular correlación
+        if temp_df[col].nunique() <= 1:
+            continue
+
+        # Si el target es constante, tampoco se puede calcular correlación
+        if temp_df[target_col].nunique() <= 1:
+            continue
+
+        # Calculamos correlación de Pearson y p-value
+        corr, p_val = pearsonr(temp_df[col], temp_df[target_col])
+
+        # Comprobamos si supera el umbral de correlación
+        cumple_corr = abs(corr) >= umbral_corr
+
+        # Comprobamos el p-value solo si se ha indicado
+        cumple_pvalue = pvalue is None or p_val <= pvalue
+
+        # Si cumple ambos filtros, guardamos la columna
+        if cumple_corr and cumple_pvalue:
+            selected_features.append(col)
+
+    return selected_features
