@@ -1,15 +1,14 @@
 """
 Unit tests for toolbox_ml.eda.core.
 """
-
 import pytest
 import pandas as pd
-
 from toolbox_ml.eda.core import (
     describe_df,
     tipifica_variables,
     plot_features_num_regression,
     get_features_num_regression,
+    plot_features_cat_regression,
 )
 
 
