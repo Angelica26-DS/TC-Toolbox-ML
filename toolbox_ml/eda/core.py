@@ -1,12 +1,7 @@
-"""
-Core EDA and Machine Learning helper functions for toolbox_ml.
-"""
-
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import stats
-from scipy.stats import pearsonr
 
 
 # ──────────────────────────────────────────────
@@ -27,17 +22,14 @@ def describe_df(df: pd.DataFrame) -> pd.DataFrame:
         Retorna None si el input no es un DataFrame válido.
     """
 
-    # Validación 1: el input tiene que ser un DataFrame
     if not isinstance(df, pd.DataFrame):
         print("Error: el argumento 'df' debe ser un pd.DataFrame.")
         return None
 
-    # Validación 2: el DataFrame no puede estar vacío
     if df.empty:
         print("Error: el DataFrame está vacío.")
         return None
 
-    # Número total de filas para calcular porcentajes
     total_filas = len(df)
 
     resultado = pd.DataFrame({
@@ -128,12 +120,12 @@ def plot_features_num_regression(
 
     Argumentos:
         df (pd.DataFrame): DataFrame con los datos.
-        target_col (str): nombre de la columna target numérica.
+        target_col (str): nombre de la columna target (numérica).
         columns (list): lista de columnas candidatas. Si está vacía,
             se usan todas las columnas numéricas del DataFrame.
-        umbral_corr (float): umbral mínimo de correlación en valor absoluto.
+        umbral_corr (float): umbral mínimo de correlación en valor absoluto (0-1).
         pvalue (float o None): si se indica, solo se incluyen columnas cuyo
-            p-value sea menor que este umbral.
+            p-valor sea menor que este umbral.
 
     Retorna:
         list: lista de columnas que cumplen los criterios y se han pintado.
@@ -169,9 +161,7 @@ def plot_features_num_regression(
     else:
         columnas_candidatas = [
             col for col in columns
-            if col in df.columns
-            and pd.api.types.is_numeric_dtype(df[col])
-            and col != target_col
+            if col in df.columns and pd.api.types.is_numeric_dtype(df[col]) and col != target_col
         ]
 
     columnas_seleccionadas = []
@@ -209,114 +199,6 @@ def plot_features_num_regression(
 
 
 # ──────────────────────────────────────────────
-# Función 4: get_features_num_regression
-# ──────────────────────────────────────────────
-
-def get_features_num_regression(
-    df: pd.DataFrame,
-    target_col: str,
-    umbral_corr: float,
-    pvalue: float = None
-) -> list:
-    """
-    Identifica variables numéricas con correlación significativa respecto a
-    una variable objetivo numérica usando correlación de Pearson.
-
-    Argumentos:
-        df (pd.DataFrame): DataFrame con los datos.
-        target_col (str): nombre de la variable objetivo numérica.
-        umbral_corr (float): umbral mínimo de correlación absoluta.
-        pvalue (float o None): valor máximo opcional de p-value.
-
-    Retorna:
-        list: lista de variables numéricas que cumplen los criterios.
-        Retorna None si las validaciones no se cumplen.
-    """
-
-    # Validamos que df sea un DataFrame
-    if not isinstance(df, pd.DataFrame):
-        print("Error: el argumento 'df' debe ser un pd.DataFrame.")
-        return None
-
-    # Validamos que target_col sea un string
-    if not isinstance(target_col, str):
-        print("Error: 'target_col' debe ser un string.")
-        return None
-
-    # Validamos que target_col exista en el DataFrame
-    if target_col not in df.columns:
-        print(f"Error: la columna objetivo '{target_col}' no existe en el DataFrame.")
-        return None
-
-    # Validamos que target_col sea numérica
-    if not pd.api.types.is_numeric_dtype(df[target_col]):
-        print(f"Error: la variable objetivo '{target_col}' debe ser numérica.")
-        return None
-
-    # Validamos que umbral_corr sea numérico
-    if not isinstance(umbral_corr, (int, float)):
-        print("Error: 'umbral_corr' debe ser un número.")
-        return None
-
-    # Validamos que umbral_corr esté entre 0 y 1
-    if umbral_corr < 0 or umbral_corr > 1:
-        print("Error: 'umbral_corr' debe estar entre 0 y 1.")
-        return None
-
-    # Validamos que pvalue sea numérico si se informa
-    if pvalue is not None and not isinstance(pvalue, (int, float)):
-        print("Error: 'pvalue' debe ser un número o None.")
-        return None
-
-    # Validamos que pvalue esté entre 0 y 1 si se informa
-    if pvalue is not None and (pvalue < 0 or pvalue > 1):
-        print("Error: 'pvalue' debe estar entre 0 y 1.")
-        return None
-
-    # Lista donde guardaremos las variables seleccionadas
-    selected_features = []
-
-    # Seleccionamos automáticamente las columnas numéricas
-    numeric_cols = df.select_dtypes(include="number").columns.tolist()
-
-    # Quitamos el target para no compararlo consigo mismo
-    if target_col in numeric_cols:
-        numeric_cols.remove(target_col)
-
-    # Recorremos cada columna numérica candidata
-    for col in numeric_cols:
-
-        # Eliminamos nulos solo en la pareja columna-target
-        temp_df = df[[col, target_col]].dropna()
-
-        # Si no hay datos suficientes, saltamos esa columna
-        if len(temp_df) < 2:
-            continue
-
-        # Si la columna es constante, no se puede calcular correlación
-        if temp_df[col].nunique() <= 1:
-            continue
-
-        # Si el target es constante, tampoco se puede calcular correlación
-        if temp_df[target_col].nunique() <= 1:
-            continue
-
-        # Calculamos correlación de Pearson y p-value
-        corr, p_val = pearsonr(temp_df[col], temp_df[target_col])
-
-        # Comprobamos si supera el umbral de correlación
-        cumple_corr = abs(corr) >= umbral_corr
-
-        # Comprobamos el p-value solo si se ha indicado
-        cumple_pvalue = pvalue is None or p_val <= pvalue
-
-        # Si cumple ambos filtros, guardamos la columna
-        if cumple_corr and cumple_pvalue:
-            selected_features.append(col)
-
-    return selected_features
-
-# ──────────────────────────────────────────────
 # Función 4: plot_features_cat_regression
 # ──────────────────────────────────────────────
 
@@ -335,42 +217,35 @@ def plot_features_cat_regression(
         target_col (str): nombre de la columna target (numérica).
         columns (list): lista de columnas categóricas a analizar.
         pvalue (float o None): si se indica, solo se incluyen columnas
-            con relación significativa con el target (test de Mann-Whitney
-            para binarias, Kruskal-Wallis para el resto).
-        with_individual_plot (bool): si True, pinta un gráfico por columna.
+            con relación significativa con el target.
+        with_individual_plot (bool): si True, pinta un gráfico por categoría.
 
     Retorna:
         list: lista de columnas que cumplen los criterios y se han pintado.
         Retorna None si alguna validación falla.
     """
 
-    # Validación 1: df tiene que ser un DataFrame
     if not isinstance(df, pd.DataFrame):
         print("Error: el argumento 'df' debe ser un pd.DataFrame.")
         return None
 
-    # Validación 2: el DataFrame no puede estar vacío
     if df.empty:
         print("Error: el DataFrame está vacío.")
         return None
 
-    # Validación 3: target_col tiene que existir en el DataFrame
     if target_col not in df.columns:
         print(f"Error: '{target_col}' no existe en el DataFrame.")
         return None
 
-    # Validación 4: target_col tiene que ser numérica
     if not pd.api.types.is_numeric_dtype(df[target_col]):
         print(f"Error: '{target_col}' debe ser una columna numérica.")
         return None
 
-    # Validación 5: pvalue si se indica tiene que estar entre 0 y 1
     if pvalue is not None:
         if not isinstance(pvalue, (int, float)) or not (0 < pvalue <= 1):
             print("Error: 'pvalue' debe ser un número entre 0 y 1, o None.")
             return None
 
-    # Si no se pasan columnas usamos todas las categóricas excepto el target
     if not columns:
         columnas_candidatas = [
             col for col in df.select_dtypes(include=["object", "category"]).columns
@@ -382,19 +257,16 @@ def plot_features_cat_regression(
             if col in df.columns and col != target_col
         ]
 
-    # Filtramos por p-valor si se indica
     columnas_seleccionadas = []
 
     for col in columnas_candidatas:
         datos_validos = df[[col, target_col]].dropna()
         grupos = [grupo[target_col].values for _, grupo in datos_validos.groupby(col)]
 
-        # Necesitamos al menos 2 grupos
         if len(grupos) < 2:
             continue
 
         if pvalue is not None:
-            # Mann-Whitney para binarias, Kruskal-Wallis para el resto
             if len(grupos) == 2:
                 _, p = stats.mannwhitneyu(grupos[0], grupos[1], alternative="two-sided")
             else:
@@ -405,17 +277,14 @@ def plot_features_cat_regression(
 
         columnas_seleccionadas.append(col)
 
-    # Si no hay columnas que cumplan los criterios avisamos y salimos
     if not columnas_seleccionadas:
         print("No hay columnas que cumplan los criterios.")
         return columnas_seleccionadas
 
-    # Pintamos los histogramas
     for col in columnas_seleccionadas:
         datos_validos = df[[col, target_col]].dropna()
 
         if with_individual_plot:
-            # Un gráfico por categoría
             categorias = datos_validos[col].unique()
             fig, axes = plt.subplots(1, len(categorias), figsize=(5 * len(categorias), 4))
             if len(categorias) == 1:
@@ -430,7 +299,6 @@ def plot_features_cat_regression(
             plt.tight_layout()
             plt.show()
         else:
-            # Un gráfico agrupado
             fig, ax = plt.subplots(figsize=(10, 4))
             for categoria, grupo in datos_validos.groupby(col):
                 ax.hist(grupo[target_col], bins=20, alpha=0.5, label=str(categoria), edgecolor="black")
