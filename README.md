@@ -1,6 +1,6 @@
 # 🚀 Toolbox ML
 
-Repositorio:
+## 🔗 Repositorio
 
 https://github.com/Angelica26-DS/TC-Toolbox-ML
 
@@ -40,6 +40,7 @@ notebooks/
 README.md
 requirements.txt
 setup.py
+
 ```
 ## 🧰 Tecnologías utilizadas
 
@@ -47,6 +48,7 @@ setup.py
 - Pandas
 - NumPy
 - SciPy
+- Scikit-Learn
 - Matplotlib
 - Seaborn
 - Pytest
@@ -94,6 +96,20 @@ pip install -r requirements.txt
 ```bash
 pip install -e .
 ```
+## 📦 Importación del paquete
+
+Una vez instalado el paquete, las funciones pueden importarse desde cualquier notebook o script:
+
+```python
+from toolbox_ml.eda.core import (
+    describe_df,
+    tipifica_variables,
+    get_features_num_regression,
+    plot_features_num_regression,
+    get_features_cat_regression,
+    plot_features_cat_regression
+)
+```
 
 ## 🛠 Funcionalidades
 
@@ -133,11 +149,24 @@ pip install -e .
 
 ### *get_features_cat_regression()*
 
-* Identifica variables categóricas relacionadas con una variable objetivo.
+* Identifica variables categóricas que presentan una relación estadísticamente significativa con una variable objetivo numérica.
+
+* Utiliza:
+    - Mann-Whitney U para variables categóricas binarias.
+    - ANOVA para variables categóricas con más de dos categorías.
+
+* Permite filtrar resultados mediante un umbral de significancia (*p-value*).
 
 ### *plot_features_cat_regression()*
 
-* Genera visualizaciones para variables categóricas relacionadas con una variable objetivo.
+* Genera visualizaciones para variables categóricas relacionadas con una variable objetivo numérica.
+
+* Incluye:
+    - Selección automática de variables significativas.
+    - Visualización mediante boxplots.
+    - Filtrado opcional por significancia estadística (*p-value*).
+    - Soporte para múltiples variables categóricas.
+
 
 ### 🚀 Ejemplos de uso
 
@@ -223,11 +252,41 @@ plot_features_num_regression(
 
 ### get_features_cat_regression()
 
-Pendiente de implementación.
+```python
+import pandas as pd
+from toolbox_ml.eda.core import get_features_cat_regression
+
+df = pd.DataFrame({
+    "categoria": ["A", "A", "B", "B", "C", "C"],
+    "ventas": [100, 110, 200, 210, 300, 310]
+})
+
+variables = get_features_cat_regression(
+    df=df,
+    target_col="ventas",
+    pvalue=0.05
+)
+
+print(variables)
+```
 
 ### plot_features_cat_regression()
 
-Pendiente de implementación.
+```python
+import pandas as pd
+from toolbox_ml.eda.core import plot_features_cat_regression
+
+df = pd.DataFrame({
+    "categoria": ["A", "A", "B", "B", "C", "C"],
+    "ventas": [100, 110, 200, 210, 300, 310]
+})
+
+plot_features_cat_regression(
+    df=df,
+    target_col="ventas",
+    pvalue=0.05
+)
+```
 
 
 ## 🧪 Testing
@@ -238,6 +297,12 @@ Para ejecutar todos los tests:
 
 ```bash
 pytest tests/ -v
+```
+
+Resultado esperado:
+
+```text
+41 passed
 ```
 
 Las pruebas cubren:
@@ -314,12 +379,14 @@ feature/final-docs
 
 Proyecto desarrollado como parte del Team Challenge del Bootcamp de Data Science.
 
-Incluye:
-- Desarrollo colaborativo mediante Git y GitHub.
-- Gestión de tareas con Issues.
-- Integración mediante Pull Requests.
-- Revisión de código entre integrantes.
-- Pruebas unitarias con Pytest.
-- Documentación y ejemplos de uso.
+Estado actual:
+
+- ✅ 6 funcionalidades implementadas.
+- ✅ 41 pruebas unitarias automatizadas superadas mediante Pytest.
+- ✅ Documentación completa.
+- ✅ Ejemplos de uso incluidos.
+- ✅ Gestión colaborativa mediante Git y GitHub.
+- ✅ Integración mediante Pull Requests y revisiones de código.
+- ✅ Notebook de demostración incluido.
 
 
