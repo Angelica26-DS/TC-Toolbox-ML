@@ -8,11 +8,8 @@ from toolbox_ml.eda.core import (
     tipifica_variables,
     plot_features_num_regression,
     get_features_num_regression,
-<<<<<<< HEAD
     plot_features_cat_regression,
-=======
     get_features_cat_regression,
->>>>>>> 05066c0fb01c24fc982cfe266d6667988a5327f0
 )
 
 
@@ -314,7 +311,7 @@ def test_get_features_num_regression_returns_none_if_pvalue_invalid():
 
     assert result is None
 
-<<<<<<< HEAD
+
 # ══════════════════════════════════════════════
 # Tests de plot_features_cat_regression
 # ══════════════════════════════════════════════
@@ -357,7 +354,6 @@ def test_plot_features_cat_regression_retorna_none_pvalue_invalido():
     """Caso de error: pvalue fuera de rango → retorna None."""
     df = pd.DataFrame({"target": [1, 2, 3], "cat": ["a", "b", "a"]})
     assert plot_features_cat_regression(df, target_col="target", pvalue=1.5) is None
-=======
 
 # ══════════════════════════════════════════════
 # Tests de get_features_cat_regression
@@ -465,4 +461,4 @@ def test_get_features_cat_regression_ignores_constant_categorical_feature():
     )
 
     assert "cat_constant" not in result
->>>>>>> 05066c0fb01c24fc982cfe266d6667988a5327f0
+
