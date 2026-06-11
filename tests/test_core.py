@@ -310,3 +310,46 @@ def test_get_features_num_regression_returns_none_if_pvalue_invalid():
     )
 
     assert result is None
+
+# ══════════════════════════════════════════════
+# Tests de plot_features_cat_regression
+# ══════════════════════════════════════════════
+
+def test_plot_features_cat_regression_devuelve_lista(monkeypatch):
+    """Caso correcto: devuelve una lista con columnas categóricas."""
+    monkeypatch.setattr("matplotlib.pyplot.show", lambda: None)
+    df = pd.DataFrame({
+        "target": [1, 2, 3, 4, 5, 6],
+        "categoria": ["a", "b", "a", "b", "a", "b"],
+    })
+    resultado = plot_features_cat_regression(df, target_col="target", columns=["categoria"])
+    assert isinstance(resultado, list)
+    assert "categoria" in resultado
+
+
+def test_plot_features_cat_regression_retorna_none_df_invalido():
+    """Caso de error: df no es DataFrame → retorna None."""
+    assert plot_features_cat_regression("no es un df", target_col="target") is None
+
+
+def test_plot_features_cat_regression_retorna_none_df_vacio():
+    """Caso de error: DataFrame vacío → retorna None."""
+    assert plot_features_cat_regression(pd.DataFrame(), target_col="target") is None
+
+
+def test_plot_features_cat_regression_retorna_none_target_no_existe():
+    """Caso de error: target_col no existe → retorna None."""
+    df = pd.DataFrame({"a": ["x", "y"], "b": [1, 2]})
+    assert plot_features_cat_regression(df, target_col="no_existe") is None
+
+
+def test_plot_features_cat_regression_retorna_none_target_no_numerico():
+    """Caso de error: target_col no es numérica → retorna None."""
+    df = pd.DataFrame({"target": ["a", "b"], "x": ["c", "d"]})
+    assert plot_features_cat_regression(df, target_col="target") is None
+
+
+def test_plot_features_cat_regression_retorna_none_pvalue_invalido():
+    """Caso de error: pvalue fuera de rango → retorna None."""
+    df = pd.DataFrame({"target": [1, 2, 3], "cat": ["a", "b", "a"]})
+    assert plot_features_cat_regression(df, target_col="target", pvalue=1.5) is None
