@@ -6,8 +6,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import stats
-from scipy.stats import pearsonr
-from scipy.stats import pearsonr, mannwhitneyu, f_oneway
 
 
 # ──────────────────────────────────────────────
@@ -303,7 +301,7 @@ def get_features_num_regression(
             continue
 
         # Calculamos correlación de Pearson y p-value
-        corr, p_val = pearsonr(temp_df[col], temp_df[target_col])
+        corr, p_val = stats.pearsonr(temp_df[col], temp_df[target_col])
 
         # Comprobamos si supera el umbral de correlación
         cumple_corr = abs(corr) >= umbral_corr
@@ -421,11 +419,11 @@ def get_features_cat_regression(
 
         # Si la variable tiene exactamente 2 categorías, usamos Mann-Whitney U
         if len(groups) == 2:
-            _, p_val = mannwhitneyu(groups[0], groups[1], alternative="two-sided")
+            _, p_val = stats.mannwhitneyu(groups[0], groups[1], alternative="two-sided")
 
         # Si la variable tiene más de 2 categorías, usamos ANOVA
         else:
-            _, p_val = f_oneway(*groups)
+            _, p_val = stats.f_oneway(*groups)
 
         # Si el p-value es menor que el umbral, guardamos la variable
         if p_val < pvalue:
