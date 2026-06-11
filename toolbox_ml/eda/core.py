@@ -431,3 +431,75 @@ def get_features_cat_regression(
 
     return selected_features
 
+
+def plot_features_cat_regression(df, target_col="", columns=[], pvalue=None, with_individual_plot=False):
+    import matplotlib.pyplot as plt
+    from scipy import stats
+
+    if not isinstance(df, pd.DataFrame):
+        print("Error: el argumento 'df' debe ser un pd.DataFrame.")
+        return None
+    if df.empty:
+        print("Error: el DataFrame está vacío.")
+        return None
+    if target_col not in df.columns:
+        print(f"Error: '{target_col}' no existe en el DataFrame.")
+        return None
+    if not pd.api.types.is_numeric_dtype(df[target_col]):
+        print(f"Error: '{target_col}' debe ser una columna numérica.")
+        return None
+    if pvalue is not None:
+        if not isinstance(pvalue, (int, float)) or not (0 < pvalue <= 1):
+            print("Error: 'pvalue' debe ser un número entre 0 y 1, o None.")
+            return None
+
+    if not columns:
+        columnas_candidatas = [col for col in df.select_dtypes(include=["object", "category"]).columns if col != target_col]
+    else:
+        columnas_candidatas = [col for col in columns if col in df.columns and col != target_col]
+
+    columnas_seleccionadas = []
+    for col in columnas_candidatas:
+        datos_validos = df[[col, target_col]].dropna()
+        grupos = [g[target_col].values for _, g in datos_validos.groupby(col)]
+        if len(grupos) < 2:
+            continue
+        if pvalue is not None:
+            if len(grupos) == 2:
+                _, p = stats.mannwhitneyu(grupos[0], grupos[1], alternative="two-sided")
+            else:
+                _, p = stats.kruskal(*grupos)
+            if p >= pvalue:
+                continue
+        columnas_seleccionadas.append(col)
+
+    if not columnas_seleccionadas:
+        print("No hay columnas que cumplan los criterios.")
+        return columnas_seleccionadas
+
+    for col in columnas_seleccionadas:
+        datos_validos = df[[col, target_col]].dropna()
+        if with_individual_plot:
+            categorias = datos_validos[col].unique()
+            fig, axes = plt.subplots(1, len(categorias), figsize=(5 * len(categorias), 4))
+            if len(categorias) == 1:
+                axes = [axes]
+            for ax, cat in zip(axes, categorias):
+                ax.hist(datos_validos[datos_validos[col] == cat][target_col], bins=20, edgecolor="black")
+                ax.set_title(f"{col} = {cat}")
+                ax.set_xlabel(target_col)
+                ax.set_ylabel("Frecuencia")
+            plt.tight_layout()
+            plt.show()
+        else:
+            fig, ax = plt.subplots(figsize=(10, 4))
+            for cat, grupo in datos_validos.groupby(col):
+                ax.hist(grupo[target_col], bins=20, alpha=0.5, label=str(cat), edgecolor="black")
+            ax.set_title(f"Distribución de {target_col} por {col}")
+            ax.set_xlabel(target_col)
+            ax.set_ylabel("Frecuencia")
+            ax.legend()
+            plt.tight_layout()
+            plt.show()
+
+    return columnas_seleccionadas
