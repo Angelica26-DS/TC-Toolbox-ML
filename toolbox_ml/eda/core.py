@@ -315,3 +315,130 @@ def get_features_num_regression(
             selected_features.append(col)
 
     return selected_features
+
+# ──────────────────────────────────────────────
+# Función 4: plot_features_cat_regression
+# ──────────────────────────────────────────────
+
+def plot_features_cat_regression(
+    df: pd.DataFrame,
+    target_col: str = "",
+    columns: list = [],
+    pvalue: float = None,
+    with_individual_plot: bool = False
+) -> list:
+    """
+    Pinta histogramas agrupados del target para cada columna categórica.
+
+    Argumentos:
+        df (pd.DataFrame): DataFrame con los datos.
+        target_col (str): nombre de la columna target (numérica).
+        columns (list): lista de columnas categóricas a analizar.
+        pvalue (float o None): si se indica, solo se incluyen columnas
+            con relación significativa con el target (test de Mann-Whitney
+            para binarias, Kruskal-Wallis para el resto).
+        with_individual_plot (bool): si True, pinta un gráfico por columna.
+
+    Retorna:
+        list: lista de columnas que cumplen los criterios y se han pintado.
+        Retorna None si alguna validación falla.
+    """
+
+    # Validación 1: df tiene que ser un DataFrame
+    if not isinstance(df, pd.DataFrame):
+        print("Error: el argumento 'df' debe ser un pd.DataFrame.")
+        return None
+
+    # Validación 2: el DataFrame no puede estar vacío
+    if df.empty:
+        print("Error: el DataFrame está vacío.")
+        return None
+
+    # Validación 3: target_col tiene que existir en el DataFrame
+    if target_col not in df.columns:
+        print(f"Error: '{target_col}' no existe en el DataFrame.")
+        return None
+
+    # Validación 4: target_col tiene que ser numérica
+    if not pd.api.types.is_numeric_dtype(df[target_col]):
+        print(f"Error: '{target_col}' debe ser una columna numérica.")
+        return None
+
+    # Validación 5: pvalue si se indica tiene que estar entre 0 y 1
+    if pvalue is not None:
+        if not isinstance(pvalue, (int, float)) or not (0 < pvalue <= 1):
+            print("Error: 'pvalue' debe ser un número entre 0 y 1, o None.")
+            return None
+
+    # Si no se pasan columnas usamos todas las categóricas excepto el target
+    if not columns:
+        columnas_candidatas = [
+            col for col in df.select_dtypes(include=["object", "category"]).columns
+            if col != target_col
+        ]
+    else:
+        columnas_candidatas = [
+            col for col in columns
+            if col in df.columns and col != target_col
+        ]
+
+    # Filtramos por p-valor si se indica
+    columnas_seleccionadas = []
+
+    for col in columnas_candidatas:
+        datos_validos = df[[col, target_col]].dropna()
+        grupos = [grupo[target_col].values for _, grupo in datos_validos.groupby(col)]
+
+        # Necesitamos al menos 2 grupos
+        if len(grupos) < 2:
+            continue
+
+        if pvalue is not None:
+            # Mann-Whitney para binarias, Kruskal-Wallis para el resto
+            if len(grupos) == 2:
+                _, p = stats.mannwhitneyu(grupos[0], grupos[1], alternative="two-sided")
+            else:
+                _, p = stats.kruskal(*grupos)
+
+            if p >= pvalue:
+                continue
+
+        columnas_seleccionadas.append(col)
+
+    # Si no hay columnas que cumplan los criterios avisamos y salimos
+    if not columnas_seleccionadas:
+        print("No hay columnas que cumplan los criterios.")
+        return columnas_seleccionadas
+
+    # Pintamos los histogramas
+    for col in columnas_seleccionadas:
+        datos_validos = df[[col, target_col]].dropna()
+
+        if with_individual_plot:
+            # Un gráfico por categoría
+            categorias = datos_validos[col].unique()
+            fig, axes = plt.subplots(1, len(categorias), figsize=(5 * len(categorias), 4))
+            if len(categorias) == 1:
+                axes = [axes]
+            for ax, categoria in zip(axes, categorias):
+                subset = datos_validos[datos_validos[col] == categoria][target_col]
+                ax.hist(subset, bins=20, edgecolor="black")
+                ax.set_title(f"{col} = {categoria}")
+                ax.set_xlabel(target_col)
+                ax.set_ylabel("Frecuencia")
+            plt.suptitle(f"Distribución de {target_col} por {col}", y=1.02)
+            plt.tight_layout()
+            plt.show()
+        else:
+            # Un gráfico agrupado
+            fig, ax = plt.subplots(figsize=(10, 4))
+            for categoria, grupo in datos_validos.groupby(col):
+                ax.hist(grupo[target_col], bins=20, alpha=0.5, label=str(categoria), edgecolor="black")
+            ax.set_title(f"Distribución de {target_col} por {col}")
+            ax.set_xlabel(target_col)
+            ax.set_ylabel("Frecuencia")
+            ax.legend()
+            plt.tight_layout()
+            plt.show()
+
+    return columnas_seleccionadas
