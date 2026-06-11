@@ -6,7 +6,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import stats
-from scipy.stats import pearsonr
 
 
 # ──────────────────────────────────────────────
@@ -302,7 +301,7 @@ def get_features_num_regression(
             continue
 
         # Calculamos correlación de Pearson y p-value
-        corr, p_val = pearsonr(temp_df[col], temp_df[target_col])
+        corr, p_val = stats.pearsonr(temp_df[col], temp_df[target_col])
 
         # Comprobamos si supera el umbral de correlación
         cumple_corr = abs(corr) >= umbral_corr
@@ -315,3 +314,120 @@ def get_features_num_regression(
             selected_features.append(col)
 
     return selected_features
+
+
+
+# ──────────────────────────────────────────────
+# Función 5: get_features_cat_regression
+# ──────────────────────────────────────────────
+
+def get_features_cat_regression(
+    df: pd.DataFrame,
+    target_col: str,
+    pvalue: float = 0.05
+) -> list:
+    """
+    Identifica variables categóricas que tienen una relación estadísticamente
+    significativa con una variable objetivo numérica.
+
+    La función selecciona automáticamente el test estadístico en función del
+    número de categorías de cada variable categórica:
+
+    - Mann-Whitney U si la variable tiene exactamente 2 categorías.
+    - ANOVA de un factor si la variable tiene más de 2 categorías.
+
+    Argumentos:
+        df (pd.DataFrame): DataFrame con los datos.
+        target_col (str): nombre de la variable objetivo numérica.
+        pvalue (float): nivel máximo de p-value para considerar una variable
+            como significativa. Por defecto es 0.05.
+
+    Retorna:
+        list: lista con los nombres de las variables categóricas significativas.
+        Retorna None si alguna validación de entrada falla.
+    """
+
+    # Validamos que df sea un DataFrame
+    if not isinstance(df, pd.DataFrame):
+        print("Error: el argumento 'df' debe ser un pd.DataFrame.")
+        return None
+
+    # Validamos que target_col sea un string
+    if not isinstance(target_col, str):
+        print("Error: 'target_col' debe ser un string.")
+        return None
+
+    # Validamos que target_col exista en el DataFrame
+    if target_col not in df.columns:
+        print(f"Error: la columna objetivo '{target_col}' no existe en el DataFrame.")
+        return None
+
+    # Validamos que target_col sea numérica
+    if not pd.api.types.is_numeric_dtype(df[target_col]):
+        print(f"Error: la variable objetivo '{target_col}' debe ser numérica.")
+        return None
+
+    # Validamos que pvalue sea numérico
+    if not isinstance(pvalue, (int, float)):
+        print("Error: 'pvalue' debe ser un número.")
+        return None
+
+    # Validamos que pvalue esté entre 0 y 1
+    if pvalue < 0 or pvalue > 1:
+        print("Error: 'pvalue' debe estar entre 0 y 1.")
+        return None
+
+    # Lista donde guardaremos las variables categóricas significativas
+    selected_features = []
+
+    # Seleccionamos automáticamente columnas categóricas
+    categorical_cols = df.select_dtypes(include=["object", "category", "bool", "string"]).columns.tolist()
+
+    # Recorremos cada columna categórica candidata
+    for col in categorical_cols:
+
+        # Eliminamos nulos solo en la columna categórica y el target
+        temp_df = df[[col, target_col]].dropna()
+
+        # Si no hay datos suficientes, saltamos la columna
+        if len(temp_df) < 2:
+            continue
+
+        # Obtenemos las categorías únicas de la variable
+        categories = temp_df[col].unique()
+
+        # Si tiene menos de 2 categorías, no se puede comparar
+        if len(categories) < 2:
+            continue
+
+        # Creamos los grupos de valores del target según cada categoría
+        groups = [
+            temp_df[temp_df[col] == category][target_col]
+            for category in categories
+        ]
+
+        # Eliminamos grupos con menos de 2 observaciones
+        groups = [
+            group
+            for group in groups
+            if len(group) >= 2
+        ]
+
+        # Si después de filtrar quedan menos de 2 grupos, no se puede comparar
+        if len(groups) < 2:
+            continue
+
+        # Si la variable tiene exactamente 2 categorías, usamos Mann-Whitney U
+        if len(groups) == 2:
+            _, p_val = stats.mannwhitneyu(groups[0], groups[1], alternative="two-sided")
+
+        # Si la variable tiene más de 2 categorías, usamos ANOVA
+        else:
+            _, p_val = stats.f_oneway(*groups)
+
+        # Si el p-value es menor que el umbral, guardamos la variable
+        if p_val < pvalue:
+            selected_features.append(col)
+
+    return selected_features
+

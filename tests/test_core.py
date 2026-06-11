@@ -10,6 +10,7 @@ from toolbox_ml.eda.core import (
     tipifica_variables,
     plot_features_num_regression,
     get_features_num_regression,
+    get_features_cat_regression,
 )
 
 
@@ -310,3 +311,111 @@ def test_get_features_num_regression_returns_none_if_pvalue_invalid():
     )
 
     assert result is None
+
+
+# ══════════════════════════════════════════════
+# Tests de get_features_cat_regression
+# ══════════════════════════════════════════════
+
+def test_get_features_cat_regression_detects_binary_categorical_feature():
+    df = pd.DataFrame({
+        "target": [10, 11, 12, 13, 100, 101, 102, 103],
+        "cat_binary": ["A", "A", "A", "A", "B", "B", "B", "B"],
+        "cat_no_relation": ["X", "Y", "X", "Y", "X", "Y", "X", "Y"],
+        "num_col": [1, 2, 3, 4, 5, 6, 7, 8],
+    })
+
+    result = get_features_cat_regression(
+        df=df,
+        target_col="target",
+        pvalue=0.05,
+    )
+
+    assert "cat_binary" in result
+    assert "num_col" not in result
+
+
+def test_get_features_cat_regression_detects_multicategory_feature():
+    df = pd.DataFrame({
+        "target": [10, 11, 12, 50, 51, 52, 100, 101, 102],
+        "cat_multi": ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
+        "cat_no_relation": ["X", "Y", "Z", "X", "Y", "Z", "X", "Y", "Z"],
+    })
+
+    result = get_features_cat_regression(
+        df=df,
+        target_col="target",
+        pvalue=0.05,
+    )
+
+    assert "cat_multi" in result
+
+
+def test_get_features_cat_regression_returns_none_if_df_is_not_dataframe():
+    result = get_features_cat_regression(
+        df=[1, 2, 3],
+        target_col="target",
+        pvalue=0.05,
+    )
+
+    assert result is None
+
+
+def test_get_features_cat_regression_returns_none_if_target_missing():
+    df = pd.DataFrame({
+        "cat": ["A", "B", "A"],
+        "x": [1, 2, 3],
+    })
+
+    result = get_features_cat_regression(
+        df=df,
+        target_col="target",
+        pvalue=0.05,
+    )
+
+    assert result is None
+
+
+def test_get_features_cat_regression_returns_none_if_target_not_numeric():
+    df = pd.DataFrame({
+        "target": ["alto", "bajo", "medio"],
+        "cat": ["A", "B", "A"],
+    })
+
+    result = get_features_cat_regression(
+        df=df,
+        target_col="target",
+        pvalue=0.05,
+    )
+
+    assert result is None
+
+
+def test_get_features_cat_regression_returns_none_if_pvalue_invalid():
+    df = pd.DataFrame({
+        "target": [1, 2, 3],
+        "cat": ["A", "B", "A"],
+    })
+
+    result = get_features_cat_regression(
+        df=df,
+        target_col="target",
+        pvalue=1.5,
+    )
+
+    assert result is None
+
+
+def test_get_features_cat_regression_ignores_constant_categorical_feature():
+    df = pd.DataFrame({
+        "target": [1, 2, 3, 4],
+        "cat_constant": ["A", "A", "A", "A"],
+    })
+
+    result = get_features_cat_regression(
+        df=df,
+        target_col="target",
+        pvalue=0.05,
+    )
+
+    assert "cat_constant" not in result
